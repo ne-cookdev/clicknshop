@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  db:
+    image: cr.yandex/crphv4gf58sj4k24hfjq/mysql:8
+    container_name: se-mysql-db
+    ports:
+      - "${DATABASE_PORT}:3306"
+    environment:
+      - MYSQL_DATABASE=${DATABASE_NAME}
+      - MYSQL_USER=${DATABASE_USER}
+      - MYSQL_PASSWORD=${DATABASE_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DATABASE_ROOT_PASSWORD}
+      - MYSQL_HOST=${DATABASE_HOST}
+    volumes:
+      - /tmp/app/mysqld:/var/run/mysqld
+      - ./se_db:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: cr.yandex/crphv4gf58sj4k24hfjq/redis:7
+    container_name: se-redis-channel-layers
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
+  web:
+    container_name: se-django
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      db:
+        condition: service_healthy
+  session-service:
+    container_name: se-fastapi-session
+    command: fastapi run app/main.py --port 8001 --reload
+    env_file:
+      - starkit-session-service/.env
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+  frontend:
+    container_name: se-react
+    depends_on:
+      - web
+    env_file:
+      - .env
