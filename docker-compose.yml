@@ -2,7 +2,7 @@ version: '3.8'
 services:
   web:
     build: ./clicknshop-backend
-    container_name: se-django
+    container_name: cns-django
     command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - .env
@@ -14,7 +14,7 @@ services:
     build:
       context: ./clicknshop-frontend
       dockerfile: Dockerfile.dev
-    container_name: se-react
+    container_name: cns-react
     depends_on:
       - web
     env_file:
